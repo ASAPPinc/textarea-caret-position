@@ -43,15 +43,14 @@ var properties = [
 
 var isFirefox = !(window.mozInnerScreenX == null);
 
-var getCaretCoordinatesFn = function (element, position, recalculate) {
+var getCaretCoordinatesFn = function (element, position, computed, recalculate) {
   // mirrored div
   var div = document.createElement('div');
   div.id = 'input-textarea-caret-position-mirror-div';
   document.body.appendChild(div);
 
   var style = div.style;
-  var computed = window.getComputedStyle? getComputedStyle(element) : element.currentStyle;  // currentStyle for IE < 9
-
+  
   // default textarea styles
   style.whiteSpace = 'pre-wrap';
   if (element.nodeName !== 'INPUT')
@@ -91,16 +90,23 @@ var getCaretCoordinatesFn = function (element, position, recalculate) {
 
   var coordinates = {
     top: span.offsetTop + parseInt(computed['borderTopWidth']),
-    left: span.offsetLeft + parseInt(computed['borderLeftWidth'])
+    left: span.offsetLeft + parseInt(computed['borderLeftWidth']),
+    height: div.offsetHeight
   };
-
+  
   document.body.removeChild(div);
 
   return coordinates;
 }
 
-if (typeof Package !== 'undefined') {
-  getCaretCoordinates = getCaretCoordinatesFn;  // Meteor
-} else {
-  module.exports = getCaretCoordinatesFn;    // Component
+module.exports = function(element, position) {
+  var computed = window.getComputedStyle ? getComputedStyle(element) : element.currentStyle;  // currentStyle for IE < 9
+  var result0 = getCaretCoordinatesFn(element, 0, computed)
+  var resultEnd = getCaretCoordinatesFn(element, element.value.length-1, computed)
+  var result = getCaretCoordinatesFn(element, position, computed)
+  var lineHeight = parseInt(computed['lineHeight'])
+  result.lineIndex = (result.top - result0.top) / lineHeight
+  result.lineCount = (resultEnd.top - result0.top) / lineHeight + 1
+  result.contentHeight = resultEnd.top + lineHeight
+  return result
 }
